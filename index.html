@@ -3,12 +3,36 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Blackjack - Sid Edition</title>
+  <title>Blackjack</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="table">
-    <h1>Blackjack <small>(Sid Edition)</small></h1>
+  <!-- Start Screen -->
+  <section id="start-screen" class="screen">
+    <div class="hero">
+      <h1 class="brand">
+        <span class="script">Social</span>
+        <span class="blk">Black</span><span class="jack">jack</span>
+      </h1>
+      <p class="subtitle">Click Start to claim your $1000 bonus</p>
+      <button id="start-btn" class="btn start">Start</button>
+    </div>
+  </section>
+
+  <!-- Game Table -->
+  <main id="table" class="table hidden">
+    <header class="hud">
+      <div class="bank">
+        Bankroll: <strong>$<span id="bankroll">0</span></strong>
+      </div>
+      <div class="bet">
+        Bet:
+        <input id="bet" type="number" min="10" max="100" step="10" value="10" />
+        <button id="bet-min" class="btn sm">Min</button>
+        <button id="bet-max" class="btn sm">Max</button>
+      </div>
+      <div class="rules">Min $10 • Max $100 • Ties to dealer</div>
+    </header>
 
     <section class="row">
       <h2>Dealer <span id="dealer-total">0</span></h2>
@@ -21,13 +45,25 @@
     </section>
 
     <div class="controls">
-      <button id="deal">Deal</button>
-      <button id="hit" disabled>Hit</button>
-      <button id="stand" disabled>Stand</button>
-      <button id="restart" disabled>Restart</button>
+      <button id="deal" class="btn">Deal</button>
+      <button id="hit" class="btn" disabled>Hit</button>
+      <button id="stand" class="btn" disabled>Stand</button>
+      <button id="restart" class="btn alt" disabled>Restart Round</button>
     </div>
 
-    <p id="status" class="status">Press Deal to start. (Dealer wins all ties.)</p>
+    <p id="status" class="status">Place your bet and press Deal.</p>
+
+    <footer class="footer">
+      <button id="reset-bankroll" class="btn danger">Reset Bankroll</button>
+    </footer>
+
+    <div id="bust-overlay" class="overlay hidden">
+      <div class="overlay-card">
+        <h3>You're broke.</h3>
+        <p>Beg your friend for money.</p>
+        <button id="try-again" class="btn">Start Over ($1000)</button>
+      </div>
+    </div>
   </main>
 
   <script src="game.js"></script>
