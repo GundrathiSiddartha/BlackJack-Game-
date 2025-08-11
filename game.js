@@ -25,6 +25,7 @@ const resetBankrollBtn = $("reset-bankroll");
 
 const bustOverlay = $("bust-overlay");
 const tryAgainBtn = $("try-again");
+bustOverlay.hidden = true; // make sure it starts hidden
 
 // ======== Game constants ========
 const START_BANKROLL = 1000;
@@ -111,7 +112,7 @@ function initBankroll() {
   updateHUD();
   statusEl.textContent = "Place your bet and press Deal. (Dealer wins all ties.)";
   setControls({canDeal:true, canPlay:false, canRestart:false});
-  bustOverlay.classList.add("hidden");
+  bustOverlay.hidden = true;
 }
 
 // ======== Round Flow ========
@@ -170,112 +171,4 @@ function endRound(msg) {
 
   // Broke?
   if (state.bankroll <= 0) {
-    setControls({canDeal:false, canPlay:false, canRestart:false});
-    setTimeout(()=> bustOverlay.classList.remove("hidden"), 400);
-  }
-}
-function restartRound() {
-  // return bet to editable state; keep bankroll as is
-  state.player = [];
-  state.dealer = [];
-  state.dealerHiddenRevealed = false;
-  state.roundOver = false;
-  statusEl.textContent = "Place your bet and press Deal.";
-  setControls({canDeal:true, canPlay:false, canRestart:false});
-  renderHands();
-}
-
-// ======== Rigged dealer logic (dealer always wins; ties to dealer) ========
-function resolveDealerAlwaysWins() {
-  const pt = handTotal(state.player);
-  if (pt > 21) { statusEl.textContent = "You busted. Dealer wins."; return; }
-
-  // Aim for dealer >= 17 and >= player (ties win for dealer).
-  let target = Math.max(17, pt);
-  if (target < pt + 1) target = pt + 1;       // try to beat outright
-  if (target > 21) target = 21;               // otherwise tie at 21
-
-  rigDealerToTarget(target);
-
-  let dt = handTotal(state.dealer);
-  if (dt > 21) {
-    // Ace softening failed — force perfect 21
-    state.dealer = [pickExactCard(10), pickExactCard("A")];
-    dt = 21;
-  }
-
-  const finalDealer = dt;
-  const finalPlayer = pt;
-
-  // Dealer wins ties by rule
-  if (finalDealer >= finalPlayer) {
-    statusEl.textContent = `Dealer: ${finalDealer} vs You: ${finalPlayer}. Dealer wins.`;
-  } else {
-    // Shouldn't happen; fix by topping up
-    const need = Math.min(21, finalPlayer + 1) - finalDealer;
-    if (need > 0) state.dealer.push(pickExactCard(need));
-    statusEl.textContent = `Dealer: ${handTotal(state.dealer)} vs You: ${finalPlayer}. Dealer wins.`;
-  }
-}
-
-function rigDealerToTarget(target) {
-  const up = state.dealer[0];
-  let hand = [up];
-  let sum = handTotal(hand);
-
-  while (sum < target) {
-    const need = target - sum;
-    let next;
-    if (need >= 10) next = pickExactCard(10);
-    else if (need === 11) next = pickExactCard("A");
-    else next = pickExactCard(need);
-    hand.push(next);
-    sum = handTotal(hand);
-    if (sum > target && hasAceAsEleven(hand)) break; // soft ace will drop total
-  }
-  if (hand.length === 1) hand.push(pickExactCard(target - handTotal(hand)));
-  state.dealer = hand;
-}
-function hasAceAsEleven(cards) {
-  let total = 0, aces = 0;
-  for (const c of cards) { total += cardValue(c.v); if (c.v === "A") aces++; }
-  return aces > 0 && total <= 21;
-}
-function pickExactCard(valueOrLabel) {
-  let v;
-  if (valueOrLabel === "A" || valueOrLabel === 11) v = "A";
-  else if (valueOrLabel === 10) v = ["10","J","Q","K"][Math.floor(Math.random()*4)];
-  else v = String(valueOrLabel);
-  const s = SUITS[Math.floor(Math.random()*SUITS.length)];
-  return { v, s };
-}
-
-// ======== Events ========
-startBtn.addEventListener("click", () => {
-  showTable();
-  initBankroll();
-  state.started = true;
-});
-dealBtn.addEventListener("click", deal);
-hitBtn.addEventListener("click", hit);
-standBtn.addEventListener("click", stand);
-restartBtn.addEventListener("click", restartRound);
-
-betMinBtn.addEventListener("click", () => betInput.value = MIN_BET);
-betMaxBtn.addEventListener("click", () => betInput.value = Math.min(MAX_BET, state.bankroll));
-
-betInput.addEventListener("change", () => betInput.value = clampBet(betInput.value));
-
-resetBankrollBtn.addEventListener("click", () => {
-  initBankroll();
-  restartRound();
-});
-
-tryAgainBtn.addEventListener("click", () => {
-  bustOverlay.classList.add("hidden");
-  initBankroll();
-  restartRound();
-});
-
-// Initial render (start screen visible)
-renderHands();
+    setControls({ca
