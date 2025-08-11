@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Blackjack - Sid Edition</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="table">
+    <h1>Blackjack <small>(Sid Edition)</small></h1>
+
+    <section class="row">
+      <h2>Dealer <span id="dealer-total">0</span></h2>
+      <div id="dealer-cards" class="cards"></div>
+    </section>
+
+    <section class="row">
+      <h2>You <span id="player-total">0</span></h2>
+      <div id="player-cards" class="cards"></div>
+    </section>
+
+    <div class="controls">
+      <button id="deal">Deal</button>
+      <button id="hit" disabled>Hit</button>
+      <button id="stand" disabled>Stand</button>
+      <button id="restart" disabled>Restart</button>
+    </div>
+
+    <p id="status" class="status">Press Deal to start. (Dealer wins all ties.)</p>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
