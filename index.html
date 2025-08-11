@@ -1,70 +1,174 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Blackjack</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <!-- Start Screen -->
-  <section id="start-screen" class="screen">
-    <div class="hero">
-      <h1 class="brand">
-        <span class="blk">Black</span><span class="jack">jack</span>
-      </h1>
-      <p class="subtitle">Click Start to claim your $1000 bonus</p>
-      <button id="start-btn" class="btn start">Start</button>
-    </div>
-  </section>
+// ======== UI handles ========
+const $ = (id) => document.getElementById(id);
+// screens
+const startScreen = $("start-screen");
+const startBtn = $("start-btn");
 
-  <!-- Game Table -->
-  <main id="table" class="table hidden">
-    <header class="hud">
-      <div class="bank">
-        Bankroll: <strong>$<span id="bankroll">0</span></strong>
-      </div>
-      <div class="bet">
-        Bet:
-        <input id="bet" type="number" min="10" max="100" step="10" value="10" />
-        <button id="bet-min" class="btn sm">Min</button>
-        <button id="bet-max" class="btn sm">Max</button>
-      </div>
-      <div class="rules">Min $10 • Max $100 • Ties to dealer</div>
-    </header>
+const table = $("table");
+const dealerCardsEl = $("dealer-cards");
+const playerCardsEl = $("player-cards");
+const dealerTotalEl = $("dealer-total");
+const playerTotalEl = $("player-total");
+const statusEl = $("status");
 
-    <section class="row">
-      <h2>Dealer <span id="dealer-total">0</span></h2>
-      <div id="dealer-cards" class="cards"></div>
-    </section>
+const dealBtn = $("deal");
+const hitBtn = $("hit");
+const standBtn = $("stand");
+const restartBtn = $("restart");
 
-    <section class="row">
-      <h2>You <span id="player-total">0</span></h2>
-      <div id="player-cards" class="cards"></div>
-    </section>
+const bankrollEl = $("bankroll");
+const betInput = $("bet");
+const betMinBtn = $("bet-min");
+const betMaxBtn = $("bet-max");
 
-    <div class="controls">
-      <button id="deal" class="btn">Deal</button>
-      <button id="hit" class="btn" disabled>Hit</button>
-      <button id="stand" class="btn" disabled>Stand</button>
-      <button id="restart" class="btn alt" disabled>Restart Round</button>
-    </div>
+const resetBankrollBtn = $("reset-bankroll");
 
-    <p id="status" class="status">Place your bet and press Deal.</p>
+const bustOverlay = $("bust-overlay");
+const tryAgainBtn = $("try-again");
+bustOverlay.hidden = true; // make sure it starts hidden
 
-    <footer class="footer">
-      <button id="reset-bankroll" class="btn danger">Reset Bankroll</button>
-    </footer>
+// ======== Game constants ========
+const START_BANKROLL = 1000;
+const MIN_BET = 10;
+const MAX_BET = 100;
 
-    <div id="bust-overlay" class="overlay hidden">
-      <div class="overlay-card">
-        <h3>You're broke.</h3>
-        <p>Beg your friend for money.</p>
-        <button id="try-again" class="btn">Start Over ($1000)</button>
-      </div>
-    </div>
-  </main>
+const SUITS = ["♠","♥","♦","♣"];
+const VALUES = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 
-  <script src="game.js"></script>
-</body>
-</html>
+// ======== State ========
+const state = {
+  bankroll: 0,
+  betLocked: 0,
+  player: [],
+  dealer: [],
+  dealerHiddenRevealed: false,
+  roundOver: false,
+  started: false
+};
+
+// ======== Helpers ========
+function randomCard() {
+  const v = VALUES[Math.floor(Math.random() * VALUES.length)];
+  const s = SUITS[Math.floor(Math.random() * SUITS.length)];
+  return { v, s };
+}
+function cardValue(v) {
+  if (v === "A") return 11;
+  if (["K","Q","J"].includes(v)) return 10;
+  return parseInt(v, 10);
+}
+function handTotal(cards) {
+  let total = 0, aces = 0;
+  for (const c of cards) {
+    total += cardValue(c.v);
+    if (c.v === "A") aces++;
+  }
+  while (total > 21 && aces > 0) {
+    total -= 10;
+    aces--;
+  }
+  return total;
+}
+function renderCard(c, faceDown=false) {
+  const div = document.createElement("div");
+  div.className = "card" + (faceDown ? " face-down" : "") + ((c.s === "♥" || c.s === "♦") ? " red" : "");
+  div.textContent = faceDown ? " " : `${c.v}${c.s}`;
+  return div;
+}
+function clampBet(n) {
+  n = Math.floor(Number(n) || 0);
+  if (n < MIN_BET) n = MIN_BET;
+  if (n > MAX_BET) n = MAX_BET;
+  if (n > state.bankroll) n = Math.max(MIN_BET, Math.min(state.bankroll, MAX_BET));
+  return n;
+}
+function updateHUD() {
+  bankrollEl.textContent = state.bankroll;
+  dealerTotalEl.textContent = state.dealerHiddenRevealed ? handTotal(state.dealer) : (state.dealer.length ? cardValue(state.dealer[0].v) : 0);
+  playerTotalEl.textContent = handTotal(state.player);
+}
+function renderHands() {
+  dealerCardsEl.innerHTML = "";
+  state.dealer.forEach((c, i) => dealerCardsEl.appendChild(renderCard(c, i === 1 && !state.dealerHiddenRevealed)));
+  playerCardsEl.innerHTML = "";
+  state.player.forEach(c => playerCardsEl.appendChild(renderCard(c)));
+  updateHUD();
+}
+function setControls({canDeal, canPlay, canRestart}) {
+  dealBtn.disabled = !canDeal;
+  hitBtn.disabled = !canPlay;
+  standBtn.disabled = !canPlay;
+  restartBtn.disabled = !canRestart;
+}
+
+// ======== Start / Bankroll ========
+function showTable() {
+  startScreen.classList.add("hidden");
+  table.classList.remove("hidden");
+}
+function initBankroll() {
+  state.bankroll = START_BANKROLL;
+  betInput.value = MIN_BET;
+  updateHUD();
+  statusEl.textContent = "Place your bet and press Deal. (Dealer wins all ties.)";
+  setControls({canDeal:true, canPlay:false, canRestart:false});
+  bustOverlay.hidden = true;
+}
+
+// ======== Round Flow ========
+function lockBet() {
+  const bet = clampBet(betInput.value);
+  betInput.value = bet;
+  if (bet > state.bankroll) return false;
+  state.betLocked = bet;
+  return true;
+}
+function deal() {
+  if (!lockBet()) {
+    statusEl.textContent = "Your bet exceeds your bankroll. Lower it.";
+    return;
+  }
+  // Deduct bet upfront
+  state.bankroll -= state.betLocked;
+
+  state.player = [randomCard(), randomCard()];
+  state.dealer = [randomCard(), randomCard()];
+  state.dealerHiddenRevealed = false;
+  state.roundOver = false;
+
+  statusEl.textContent = `Bet locked: $${state.betLocked}. Hit or Stand.`;
+  setControls({canDeal:false, canPlay:true, canRestart:false});
+  renderHands();
+
+  // auto-resolve if player busts immediately (unlikely)
+  if (handTotal(state.player) > 21) stand();
+}
+function hit() {
+  if (state.roundOver) return;
+  state.player.push(randomCard());
+  renderHands();
+  if (handTotal(state.player) > 21) {
+    // player busts — dealer wins
+    state.dealerHiddenRevealed = true;
+    endRound("You busted. Dealer wins.");
+  }
+}
+function stand() {
+  if (state.roundOver) return;
+  state.dealerHiddenRevealed = true;
+  resolveDealerAlwaysWins();
+  renderHands();
+  endRound(); // message set by resolver
+}
+function endRound(msg) {
+  state.roundOver = true;
+  if (!msg) msg = statusEl.textContent;
+  statusEl.textContent = msg;
+
+  // No payout because dealer always wins.
+  setControls({canDeal:true, canPlay:false, canRestart:true});
+  updateHUD();
+
+  // Broke?
+  if (state.bankroll <= 0) {
+    setControls({ca
